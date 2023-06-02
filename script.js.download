@@ -1,0 +1,141 @@
+
+function onLoad(){
+    updateNav()
+
+    const navButtons = document.getElementsByClassName('nav-btn')
+
+    for (let i = 0; i < navButtons.length; i++) {
+        const button = navButtons[i]
+        button.addEventListener('click', function(){
+            onNavSelect(button)
+        })
+    }
+
+}
+
+function onResize(){
+    updateNav(false)
+}
+
+function onNavSelect(button){
+    const pages = document.getElementsByClassName('page')
+
+    var currentPage = null
+
+    for (let i = 0; i < pages.length; i++) {
+        const page = pages[i]
+        if (page.classList.contains('show')){
+            currentPage = page
+        }
+        page.classList.remove('show')
+        page.classList.add('hide')
+
+        const pageId = page.getAttribute('id')
+
+        if (pageId == button.dataset.page){
+            page.classList.remove('hide')
+            page.classList.add('show')
+            if (pageId !== 'home'){
+                window.location.hash = '#' + pageId
+            }else{
+                window.location.hash = ''
+                window.history.pushState(null, "", window.location.href.replace("#", "")) 
+            } 
+        }
+    }
+
+    updateNavIndicator(button)
+}
+
+function updateNavIndicator(button){
+    const navButtons = document.getElementsByClassName('nav-btn')
+    for (let i = 0; i < navButtons.length; i++) {
+        navButtons[i].classList.remove('active')
+    }
+
+    const slidingNavBg = document.getElementById('nav-btn-bg')
+    const navBar = document.getElementById('site-nav')
+
+    const buttonRect = button.getBoundingClientRect()
+    const navRect = navBar.getBoundingClientRect()
+
+    const pos = buttonRect.left - navRect.left
+
+    slidingNavBg.style.left = pos + 'px'
+    slidingNavBg.style.width = (buttonRect.right - buttonRect.left) + 'px'
+    slidingNavBg.style.opacity = 1
+
+    button.classList.add('active')
+}
+
+function updateNav(full = true){
+    const navButtons = document.getElementsByClassName('nav-btn')
+    const hash = window.location.hash.replace('#', '')
+
+    const method = full ? onNavSelect : updateNavIndicator
+
+    if (!hash){
+        method(navButtons[0])
+    } else {
+        for (let i = 0; i < navButtons.length; i++) {
+            const button = navButtons[i]
+            if (button.dataset.page == hash){
+                method(button)
+            }
+        }
+    } 
+}
+
+async function getArticle(e, id = -1){
+    const article_button = e.target
+    if (id < 0){
+        id = article_button.dataset.id
+    }
+    const response = await fetch("/read", {
+        method: "POST",
+        headers: {"id": id}
+    });
+    const data = await response.json();
+
+    const content = document.getElementById('article-content')
+    const articles = document.getElementById('articles');
+
+    if (articles.ontransitionend == null){
+        articles.ontransitionend = (e) => {
+            if (articles.dataset.direction == 0){
+                content.classList.add('hidden')
+            }
+        }
+    }
+    
+    content.classList.remove('hidden')
+
+    content.querySelector('#article-title').textContent = data.name
+    content.querySelector('#article-header').style.backgroundImage = 'url(' + data.image + ')'
+    content.querySelector('#article-body').innerHTML = data.body;
+
+    const metadata = content.querySelector('#article-metadata')
+    metadata.querySelector('#article-avatar').src = data.avatar
+    metadata.querySelector('#article-author').textContent = data.author
+
+    const tags = content.querySelector('#article-tags')
+    tags.replaceChildren()
+    data.tags_arr.forEach(tag => {
+        const tagNode = document.createElement('span')
+        tagNode.classList.add('tag')
+        tagNode.classList.add('on-big-screen')
+        tagNode.textContent = tag
+        tags.appendChild(tagNode)
+    });
+
+    metadata.querySelector('#article-date').textContent = data.date
+    
+    slide(e, 'articles', -1);
+}
+
+function slide(e, element_id, amount){
+    const elm = document.getElementById(element_id);
+    elm.dataset.direction = amount
+    elm.style.left = (amount * 100).toString() + '%';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
