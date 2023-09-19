@@ -40,6 +40,12 @@ main{
     height: 100vh;
 }
 
+p {
+  font-size: 1rem;
+  font-family: sans-serif;
+  margin: 20px;
+}
+
 section{
     min-height: 128px;
     padding-top: 64px;
